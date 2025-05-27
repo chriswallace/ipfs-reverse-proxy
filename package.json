@@ -1,0 +1,29 @@
+{
+  "name": "ipfs-reverse-proxy",
+  "version": "1.0.0",
+  "description": "A reverse proxy media server for Pinata IPFS gateway",
+  "main": "api/proxy.js",
+  "scripts": {
+    "build": "echo 'No build step required'",
+    "start": "node api/proxy.js",
+    "test": "node test/test-proxy.js",
+    "test:local": "node test/test-proxy.js local",
+    "test:production": "node test/test-proxy.js production"
+  },
+  "dependencies": {
+    "axios": "^1.6.0",
+    "cors": "^2.8.5"
+  },
+  "devDependencies": {
+    "vercel": "^32.0.0"
+  },
+  "keywords": [
+    "ipfs",
+    "pinata",
+    "reverse-proxy",
+    "media-server",
+    "vercel"
+  ],
+  "author": "",
+  "license": "MIT"
+} 
