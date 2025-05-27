@@ -10,11 +10,11 @@ const CONFIG = {
   // For local testing (when running `vercel dev`)
   LOCAL_URL: "http://localhost:3000",
 
-  // For production testing (replace with your actual Vercel URL)
-  PRODUCTION_URL: "https://your-proxy.vercel.app",
+  // For production testing - your actual custom domain
+  PRODUCTION_URL: "https://ipfs.wallacemuseum.com",
 
-  // Your API key (set this in your environment or replace here)
-  API_KEY: process.env.API_KEY || "your_test_api_key_here",
+  // API key is no longer required for public image serving
+  API_KEY: process.env.API_KEY || "not_required_for_public_access",
 
   // Test IPFS hashes (these are real public IPFS files for testing)
   TEST_HASHES: {
@@ -32,6 +32,11 @@ class ProxyTester {
     this.baseUrl = baseUrl.replace(/\/$/, "");
     this.apiKey = apiKey;
     this.results = [];
+    // Browser user agent for testing
+    this.browserHeaders = {
+      "User-Agent":
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+    };
   }
 
   async runTest(name, testFn) {
@@ -75,15 +80,20 @@ class ProxyTester {
   }
 
   async testAuthenticationRequired() {
-    return this.runTest("Authentication Required", async () => {
+    return this.runTest("Domain-Based Authentication", async () => {
       try {
+        // Test that requests without browser user agent are blocked
+        // Use a different hash to avoid cache
         await axios.get(
-          `${this.baseUrl}/api/proxy?hash=${CONFIG.TEST_HASHES.text}`
+          `${this.baseUrl}/api/proxy?hash=${CONFIG.TEST_HASHES.json}`,
+          { headers: { "User-Agent": "curl/7.68.0" } } // Non-browser user agent
         );
-        throw new Error("Request should have failed without API key");
+        throw new Error(
+          "Request should have failed with non-browser user agent"
+        );
       } catch (error) {
         if (error.response && error.response.status === 401) {
-          console.log("   ✓ Correctly rejected request without API key");
+          console.log("   ✓ Correctly rejected non-browser request");
           return true;
         }
         throw error;
@@ -95,7 +105,7 @@ class ProxyTester {
     return this.runTest("Invalid Hash Rejection", async () => {
       try {
         await axios.get(`${this.baseUrl}/api/proxy?hash=invalid_hash`, {
-          headers: { "X-API-Key": this.apiKey },
+          headers: { "X-API-Key": this.apiKey, ...this.browserHeaders },
         });
         throw new Error("Request should have failed with invalid hash");
       } catch (error) {
@@ -113,7 +123,7 @@ class ProxyTester {
       const response = await axios.get(
         `${this.baseUrl}/api/proxy?hash=${CONFIG.TEST_HASHES.text}`,
         {
-          headers: { "X-API-Key": this.apiKey },
+          headers: { "X-API-Key": this.apiKey, ...this.browserHeaders },
         }
       );
 
@@ -137,7 +147,7 @@ class ProxyTester {
       const response = await axios.get(
         `${this.baseUrl}/api/proxy?hash=${CONFIG.TEST_HASHES.image}`,
         {
-          headers: { "X-API-Key": this.apiKey },
+          headers: { "X-API-Key": this.apiKey, ...this.browserHeaders },
           responseType: "arraybuffer",
         }
       );
@@ -170,7 +180,7 @@ class ProxyTester {
       const response1 = await axios.get(
         `${this.baseUrl}/ipfs/${CONFIG.TEST_HASHES.text}`,
         {
-          headers: { "X-API-Key": this.apiKey },
+          headers: { "X-API-Key": this.apiKey, ...this.browserHeaders },
         }
       );
 
@@ -178,7 +188,7 @@ class ProxyTester {
       const response2 = await axios.get(
         `${this.baseUrl}/gateway/${CONFIG.TEST_HASHES.text}`,
         {
-          headers: { "X-API-Key": this.apiKey },
+          headers: { "X-API-Key": this.apiKey, ...this.browserHeaders },
         }
       );
 
@@ -198,7 +208,7 @@ class ProxyTester {
       const response = await axios.get(
         `${this.baseUrl}/api/proxy?hash=${CONFIG.TEST_HASHES.text}`,
         {
-          headers: { "X-API-Key": this.apiKey },
+          headers: { "X-API-Key": this.apiKey, ...this.browserHeaders },
         }
       );
 
@@ -225,7 +235,7 @@ class ProxyTester {
         const response = await axios.get(
           `${this.baseUrl}/api/proxy?hash=${CONFIG.TEST_HASHES.text}&gateway=dedicated`,
           {
-            headers: { "X-API-Key": this.apiKey },
+            headers: { "X-API-Key": this.apiKey, ...this.browserHeaders },
           }
         );
 
@@ -308,11 +318,12 @@ async function main() {
     process.exit(1);
   }
 
-  if (!apiKey || apiKey === "your_test_api_key_here") {
+  if (!apiKey || apiKey === "not_required_for_public_access") {
     console.log(
-      "❌ Please set your API_KEY environment variable or update CONFIG.API_KEY"
+      "ℹ️  API_KEY not required for public image serving (domain-based auth only)"
     );
-    process.exit(1);
+    // Set a dummy value for tests that might still reference it
+    apiKey = "not_required";
   }
 
   const tester = new ProxyTester(baseUrl, apiKey);

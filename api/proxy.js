@@ -2,50 +2,81 @@ const axios = require("axios");
 
 // Environment variables validation
 const PINATA_JWT = process.env.PINATA_JWT;
-const API_KEY = process.env.API_KEY;
-const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS
-  ? process.env.ALLOWED_ORIGINS.split(",")
-  : [];
+const API_KEY = process.env.API_KEY; // Optional - not used for public image serving
+
+// Define allowed origins for wallacemuseum.com and local development
+const ALLOWED_ORIGINS = [
+  "https://wallacemuseum.com",
+  "https://www.wallacemuseum.com",
+  "http://localhost:5173",
+  "https://localhost:5173",
+  "https://ipfs.wallacemuseum.com",
+];
 
 if (!PINATA_JWT) {
   console.error("PINATA_JWT environment variable is required");
 }
 
-if (!API_KEY) {
-  console.error("API_KEY environment variable is required");
+// API_KEY is optional for public image serving
+if (API_KEY) {
+  console.log("API_KEY provided but not required for public image serving");
 }
 
-// CORS headers
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-  "Access-Control-Allow-Headers":
-    "X-Requested-With, Content-Type, Authorization, X-API-Key",
-  "Access-Control-Max-Age": "86400",
+// CORS headers - will be dynamically set based on origin
+const getCorsHeaders = (origin) => {
+  const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : "null";
+
+  return {
+    "Access-Control-Allow-Origin": allowedOrigin,
+    "Access-Control-Allow-Methods": "GET, OPTIONS",
+    "Access-Control-Allow-Headers":
+      "X-Requested-With, Content-Type, Authorization, X-API-Key",
+    "Access-Control-Max-Age": "86400",
+    "Access-Control-Allow-Credentials": "true",
+  };
 };
 
 // Authentication middleware
 function authenticateRequest(req) {
-  const apiKey =
-    req.headers["x-api-key"] ||
-    req.headers["authorization"]?.replace("Bearer ", "");
+  // Get the origin from the request
+  const origin = req.headers.origin || req.headers.referer;
+  const userAgent = req.headers["user-agent"] || "";
 
-  if (!apiKey || apiKey !== API_KEY) {
-    return false;
-  }
+  // If origin is provided, validate it
+  if (origin) {
+    try {
+      const originUrl = new URL(origin);
+      const isAllowedOrigin = ALLOWED_ORIGINS.some((allowedOrigin) => {
+        const allowedUrl = new URL(allowedOrigin);
+        return originUrl.hostname === allowedUrl.hostname;
+      });
 
-  // Optional: Check origin if ALLOWED_ORIGINS is configured
-  if (ALLOWED_ORIGINS.length > 0) {
-    const origin = req.headers.origin || req.headers.referer;
-    const isAllowedOrigin = ALLOWED_ORIGINS.some(
-      (allowedOrigin) => origin && origin.includes(allowedOrigin)
-    );
+      if (!isAllowedOrigin) {
+        console.log(`Blocked request from unauthorized origin: ${origin}`);
+        return false;
+      }
+    } catch (error) {
+      console.log(`Blocked request: Invalid origin format: ${origin}`);
+      return false;
+    }
+  } else {
+    // No origin header - check if it's a browser request for images
+    const isBrowserRequest =
+      userAgent.includes("Mozilla") ||
+      userAgent.includes("Chrome") ||
+      userAgent.includes("Safari") ||
+      userAgent.includes("Firefox") ||
+      userAgent.includes("Edge");
 
-    if (!isAllowedOrigin) {
+    // Allow browser requests (for img tags, direct navigation)
+    // Block obvious programmatic requests (curl, wget, etc.)
+    if (!isBrowserRequest && !userAgent.includes("bot")) {
+      console.log(`Blocked non-browser request without origin: ${userAgent}`);
       return false;
     }
   }
 
+  // No API key required for public image serving
   return true;
 }
 
@@ -58,6 +89,9 @@ module.exports = async (req, res) => {
 
   try {
     // Set CORS headers
+    const corsHeaders = getCorsHeaders(
+      req.headers.origin || req.headers.referer
+    );
     Object.entries(corsHeaders).forEach(([key, value]) => {
       res.setHeader(key, value);
     });
@@ -66,7 +100,7 @@ module.exports = async (req, res) => {
     if (!authenticateRequest(req)) {
       return res.status(401).json({
         error: "Unauthorized",
-        message: "Invalid API key or origin not allowed",
+        message: "Access denied: Origin not allowed",
       });
     }
 

@@ -12,6 +12,10 @@
     {
       "source": "/gateway/(.*)",
       "destination": "/api/proxy?hash=$1"
+    },
+    {
+      "source": "/(Qm[1-9A-HJ-NP-Za-km-z]{44}|bafy[a-z2-7]{55})",
+      "destination": "/api/proxy?hash=$1"
     }
   ],
   "headers": [
@@ -19,16 +23,33 @@
       "source": "/api/(.*)",
       "headers": [
         {
-          "key": "Access-Control-Allow-Origin",
-          "value": "*"
-        },
-        {
           "key": "Access-Control-Allow-Methods",
-          "value": "GET, POST, PUT, DELETE, OPTIONS"
+          "value": "GET, OPTIONS"
         },
         {
           "key": "Access-Control-Allow-Headers",
           "value": "X-Requested-With, Content-Type, Authorization, X-API-Key"
+        },
+        {
+          "key": "Access-Control-Max-Age",
+          "value": "86400"
+        }
+      ]
+    },
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Frame-Options",
+          "value": "SAMEORIGIN"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
         }
       ]
     }

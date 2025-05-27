@@ -144,11 +144,8 @@ class IPFSImageComponent {
 
 // Example usage
 async function example() {
-  // Initialize the proxy client
-  const proxy = new IPFSProxyClient(
-    "https://your-proxy.vercel.app",
-    "your_secure_api_key_here"
-  );
+  // Initialize the proxy client (no API key required for public access)
+  const proxy = new IPFSProxyClient("https://ipfs.wallacemuseum.com");
 
   try {
     // Check if proxy is healthy
@@ -156,7 +153,7 @@ async function example() {
     console.log("Proxy health:", health);
 
     // Example IPFS hash (replace with your actual hash)
-    const ipfsHash = "QmYourIPFSHashHere";
+    const ipfsHash = "QmNrhZHUaEqxhyLfqoq1mtHSipkWHeT31LNHb1QEbDHgnc";
 
     // Get content as blob (for images, videos, etc.)
     const blob = await proxy.getBlob(ipfsHash);
@@ -195,8 +192,7 @@ function useIPFSContent(hash, options = {}) {
   const proxy = React.useMemo(
     () =>
       new IPFSProxyClient(
-        process.env.REACT_APP_PROXY_URL,
-        process.env.REACT_APP_API_KEY
+        process.env.REACT_APP_PROXY_URL || "https://ipfs.wallacemuseum.com"
       ),
     []
   );
@@ -236,3 +232,7 @@ function useIPFSContent(hash, options = {}) {
 if (typeof module !== "undefined" && module.exports) {
   module.exports = { IPFSProxyClient, IPFSImageComponent };
 }
+
+// Configuration
+const PROXY_BASE_URL =
+  process.env.REACT_APP_IPFS_PROXY_URL || "https://ipfs.wallacemuseum.com";

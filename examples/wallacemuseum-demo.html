@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wallace Museum - IPFS Image Demo</title>
+  <style>
+    body {
+      font-family: 'Georgia', serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #f8f6f0;
+      color: #2c2c2c;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 40px;
+      border-bottom: 2px solid #8b4513;
+      padding-bottom: 20px;
+    }
+
+    .header h1 {
+      color: #8b4513;
+      font-size: 2.5em;
+      margin: 0;
+    }
+
+    .header p {
+      color: #666;
+      font-style: italic;
+      margin: 10px 0 0 0;
+    }
+
+    .gallery {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 30px;
+      margin: 40px 0;
+    }
+
+    .artwork {
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+      overflow: hidden;
+      transition: transform 0.3s ease;
+    }
+
+    .artwork:hover {
+      transform: translateY(-5px);
+    }
+
+    .artwork img {
+      width: 100%;
+      height: 250px;
+      object-fit: cover;
+      border-bottom: 1px solid #eee;
+    }
+
+    .artwork-info {
+      padding: 20px;
+    }
+
+    .artwork-info h3 {
+      color: #8b4513;
+      margin: 0 0 10px 0;
+      font-size: 1.3em;
+    }
+
+    .artwork-info p {
+      margin: 5px 0;
+      line-height: 1.5;
+    }
+
+    .artist {
+      font-weight: bold;
+      color: #444;
+    }
+
+    .date {
+      color: #666;
+      font-style: italic;
+    }
+
+    .ipfs-info {
+      background: #e8f4f8;
+      border: 1px solid #b8d4da;
+      border-radius: 5px;
+      padding: 15px;
+      margin: 30px 0;
+    }
+
+    .ipfs-info h3 {
+      color: #2c5aa0;
+      margin: 0 0 10px 0;
+    }
+
+    .ipfs-info code {
+      background: #f0f0f0;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: 'Courier New', monospace;
+    }
+
+    .tech-demo {
+      background: white;
+      border-radius: 10px;
+      padding: 20px;
+      margin: 30px 0;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .status {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 0.9em;
+      font-weight: bold;
+    }
+
+    .status.success {
+      background: #d4edda;
+      color: #155724;
+    }
+
+    .status.error {
+      background: #f8d7da;
+      color: #721c24;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="header">
+    <h1>The Wallace Museum</h1>
+    <p>Decentralized Art Collection powered by IPFS</p>
+  </div>
+
+  <div class="ipfs-info">
+    <h3>🌐 IPFS Integration Demo</h3>
+    <p>This page demonstrates how the Wallace Museum uses IPFS for decentralized image storage.
+      Images are served through our secure proxy at <code>ipfs.wallacemuseum.com</code> which:</p>
+    <ul>
+      <li>✅ Only allows access from wallacemuseum.com domains</li>
+      <li>✅ Serves images directly via IPFS hash: <code>/[cid]</code></li>
+      <li>✅ Provides fast, cached delivery</li>
+      <li>✅ Ensures content permanence and authenticity</li>
+    </ul>
+  </div>
+
+  <div class="gallery">
+    <div class="artwork">
+      <img src="https://ipfs.wallacemuseum.com/QmNrhZHUaEqxhyLfqoq1mtHSipkWHeT31LNHb1QEbDHgnc" alt="Sample Artwork"
+        onerror="this.parentElement.querySelector('.status').className='status error'; this.parentElement.querySelector('.status').textContent='❌ Failed to load';"
+        onload="this.parentElement.querySelector('.status').className='status success'; this.parentElement.querySelector('.status').textContent='✅ Loaded from IPFS';">
+      <div class="artwork-info">
+        <h3>Sample Digital Artwork</h3>
+        <p class="artist">Artist: Digital Creator</p>
+        <p class="date">Date: 2024</p>
+        <p>This image is stored on IPFS and served through our secure proxy.</p>
+        <p><strong>IPFS Hash:</strong> <code>QmNrhZHUaEqxhyLfqoq1mtHSipkWHeT31LNHb1QEbDHgnc</code></p>
+        <span class="status">Loading...</span>
+      </div>
+    </div>
+
+    <div class="artwork">
+      <img src="https://ipfs.wallacemuseum.com/ipfs/QmNrhZHUaEqxhyLfqoq1mtHSipkWHeT31LNHb1QEbDHgnc"
+        alt="Sample Artwork (IPFS path)"
+        onerror="this.parentElement.querySelector('.status').className='status error'; this.parentElement.querySelector('.status').textContent='❌ Failed to load';"
+        onload="this.parentElement.querySelector('.status').className='status success'; this.parentElement.querySelector('.status').textContent='✅ Loaded via /ipfs/ path';">
+      <div class="artwork-info">
+        <h3>Same Artwork - Different Path</h3>
+        <p class="artist">Artist: Digital Creator</p>
+        <p class="date">Date: 2024</p>
+        <p>Same image accessed via <code>/ipfs/[hash]</code> path for compatibility.</p>
+        <p><strong>URL:</strong> <code>/ipfs/QmNrhZHUaEqxhyLfqoq1mtHSipkWHeT31LNHb1QEbDHgnc</code></p>
+        <span class="status">Loading...</span>
+      </div>
+    </div>
+
+    <div class="artwork">
+      <img src="https://ipfs.wallacemuseum.com/gateway/QmNrhZHUaEqxhyLfqoq1mtHSipkWHeT31LNHb1QEbDHgnc"
+        alt="Sample Artwork (Gateway path)"
+        onerror="this.parentElement.querySelector('.status').className='status error'; this.parentElement.querySelector('.status').textContent='❌ Failed to load';"
+        onload="this.parentElement.querySelector('.status').className='status success'; this.parentElement.querySelector('.status').textContent='✅ Loaded via /gateway/ path';">
+      <div class="artwork-info">
+        <h3>Gateway Path Access</h3>
+        <p class="artist">Artist: Digital Creator</p>
+        <p class="date">Date: 2024</p>
+        <p>Same image accessed via <code>/gateway/[hash]</code> path.</p>
+        <p><strong>URL:</strong> <code>/gateway/QmNrhZHUaEqxhyLfqoq1mtHSipkWHeT31LNHb1QEbDHgnc</code></p>
+        <span class="status">Loading...</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="tech-demo">
+    <h3>🔧 Technical Implementation</h3>
+    <p>The Wallace Museum IPFS proxy provides multiple access patterns:</p>
+
+    <h4>Direct CID Access (Recommended)</h4>
+    <pre><code>&lt;img src="https://ipfs.wallacemuseum.com/QmNrhZHUaEqxhyLfqoq1mtHSipkWHeT31LNHb1QEbDHgnc" /&gt;</code></pre>
+
+    <h4>IPFS Path</h4>
+    <pre><code>&lt;img src="https://ipfs.wallacemuseum.com/ipfs/QmNrhZHUaEqxhyLfqoq1mtHSipkWHeT31LNHb1QEbDHgnc" /&gt;</code></pre>
+
+    <h4>Gateway Path</h4>
+    <pre><code>&lt;img src="https://ipfs.wallacemuseum.com/gateway/QmNrhZHUaEqxhyLfqoq1mtHSipkWHeT31LNHb1QEbDHgnc" /&gt;</code></pre>
+
+    <h4>Security Features</h4>
+    <ul>
+      <li><strong>Domain Restriction:</strong> Only wallacemuseum.com and localhost can access images</li>
+      <li><strong>Browser Detection:</strong> Allows legitimate browser requests, blocks automated tools</li>
+      <li><strong>CORS Protection:</strong> Proper cross-origin headers for web security</li>
+      <li><strong>Caching:</strong> Optimized headers for fast image delivery</li>
+    </ul>
+  </div>
+
+  <script>
+    // Log the current domain for demonstration
+    console.log('Current domain:', window.location.hostname);
+    console.log('Origin header will be:', window.location.origin);
+
+    // Add some interactivity
+    document.addEventListener('DOMContentLoaded', function () {
+      const images = document.querySelectorAll('.artwork img');
+      images.forEach(img => {
+        img.addEventListener('load', function () {
+          console.log('Successfully loaded image:', this.src);
+        });
+        img.addEventListener('error', function () {
+          console.error('Failed to load image:', this.src);
+        });
+      });
+    });
+  </script>
+</body>
+
+</html>

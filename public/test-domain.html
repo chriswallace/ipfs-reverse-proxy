@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IPFS Proxy Domain Test</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #f5f5f5;
+    }
+
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .test-section {
+      margin: 20px 0;
+      padding: 20px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+    }
+
+    .success {
+      border-color: #4CAF50;
+      background-color: #f1f8e9;
+    }
+
+    .error {
+      border-color: #f44336;
+      background-color: #ffebee;
+    }
+
+    .warning {
+      border-color: #ff9800;
+      background-color: #fff3e0;
+    }
+
+    img {
+      max-width: 100%;
+      height: auto;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+    }
+
+    button {
+      background-color: #2196F3;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 5px;
+      cursor: pointer;
+      margin: 5px;
+    }
+
+    button:hover {
+      background-color: #1976D2;
+    }
+
+    .log {
+      background-color: #f8f9fa;
+      border: 1px solid #e9ecef;
+      border-radius: 5px;
+      padding: 10px;
+      margin: 10px 0;
+      font-family: monospace;
+      white-space: pre-wrap;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1>🔒 IPFS Proxy Domain Restriction Test</h1>
+    <p>This page tests whether the IPFS proxy correctly restricts access to allowed domains only.</p>
+
+    <div class="test-section">
+      <h3>Current Domain Information</h3>
+      <p><strong>Current Origin:</strong> <span id="currentOrigin"></span></p>
+      <p><strong>Current Hostname:</strong> <span id="currentHostname"></span></p>
+      <p><strong>User Agent:</strong> <span id="userAgent"></span></p>
+    </div>
+
+    <div class="test-section">
+      <h3>🧪 Test Image Loading</h3>
+      <p>Testing with IPFS hash: <code>QmNrhZHUaEqxhyLfqoq1mtHSipkWHeT31LNHb1QEbDHgnc</code></p>
+
+      <button onclick="testDirectAccess()">Test Direct CID Access</button>
+      <button onclick="testIpfsPath()">Test /ipfs/ Path</button>
+      <button onclick="testGatewayPath()">Test /gateway/ Path</button>
+      <button onclick="clearResults()">Clear Results</button>
+
+      <div id="testResults"></div>
+      <div id="testLog" class="log"></div>
+    </div>
+
+    <div class="test-section">
+      <h3>📋 Expected Behavior</h3>
+      <ul>
+        <li><strong>✅ Allowed Domains:</strong>
+          <ul>
+            <li>https://wallacemuseum.com</li>
+            <li>https://www.wallacemuseum.com</li>
+            <li>https://ipfs.wallacemuseum.com</li>
+            <li>http://localhost:* (development)</li>
+          </ul>
+        </li>
+        <li><strong>❌ Blocked:</strong> All other domains</li>
+        <li><strong>🌍 Public Access:</strong> No API key required for legitimate browser requests</li>
+      </ul>
+    </div>
+  </div>
+
+  <script>
+    // Display current domain info
+    document.getElementById('currentOrigin').textContent = window.location.origin;
+    document.getElementById('currentHostname').textContent = window.location.hostname;
+    document.getElementById('userAgent').textContent = navigator.userAgent;
+
+    function log(message) {
+      const logDiv = document.getElementById('testLog');
+      const timestamp = new Date().toLocaleTimeString();
+      logDiv.textContent += `[${timestamp}] ${message}\n`;
+      logDiv.scrollTop = logDiv.scrollHeight;
+    }
+
+    function clearResults() {
+      document.getElementById('testResults').innerHTML = '';
+      document.getElementById('testLog').textContent = '';
+    }
+
+    async function testImageLoad(url, testName) {
+      log(`Testing ${testName}: ${url}`);
+
+      try {
+        const response = await fetch(url, {
+          method: 'GET',
+          headers: {
+            'Accept': 'image/*,*/*'
+          }
+        });
+
+        log(`Response status: ${response.status} ${response.statusText}`);
+        log(`Content-Type: ${response.headers.get('content-type')}`);
+        log(`CORS Origin: ${response.headers.get('access-control-allow-origin')}`);
+
+        if (response.ok) {
+          const blob = await response.blob();
+          const imageUrl = URL.createObjectURL(blob);
+
+          const resultDiv = document.createElement('div');
+          resultDiv.className = 'test-section success';
+          resultDiv.innerHTML = `
+                        <h4>✅ ${testName} - SUCCESS</h4>
+                        <p>Status: ${response.status} ${response.statusText}</p>
+                        <p>Content-Type: ${response.headers.get('content-type')}</p>
+                        <p>Size: ${blob.size} bytes</p>
+                        <img src="${imageUrl}" alt="Test image" style="max-width: 200px;">
+                    `;
+          document.getElementById('testResults').appendChild(resultDiv);
+          log(`✅ ${testName} successful - Image loaded (${blob.size} bytes)`);
+        } else {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+      } catch (error) {
+        log(`❌ ${testName} failed: ${error.message}`);
+
+        const resultDiv = document.createElement('div');
+        resultDiv.className = 'test-section error';
+        resultDiv.innerHTML = `
+                    <h4>❌ ${testName} - FAILED</h4>
+                    <p>Error: ${error.message}</p>
+                    <p>This is expected if you're not on an allowed domain.</p>
+                `;
+        document.getElementById('testResults').appendChild(resultDiv);
+      }
+    }
+
+    function testDirectAccess() {
+      const hash = 'QmNrhZHUaEqxhyLfqoq1mtHSipkWHeT31LNHb1QEbDHgnc';
+      const url = `${window.location.origin}/${hash}`;
+      testImageLoad(url, 'Direct CID Access');
+    }
+
+    function testIpfsPath() {
+      const hash = 'QmNrhZHUaEqxhyLfqoq1mtHSipkWHeT31LNHb1QEbDHgnc';
+      const url = `${window.location.origin}/ipfs/${hash}`;
+      testImageLoad(url, '/ipfs/ Path');
+    }
+
+    function testGatewayPath() {
+      const hash = 'QmNrhZHUaEqxhyLfqoq1mtHSipkWHeT31LNHb1QEbDHgnc';
+      const url = `${window.location.origin}/gateway/${hash}`;
+      testImageLoad(url, '/gateway/ Path');
+    }
+
+    // Auto-run a basic test on page load
+    window.addEventListener('load', () => {
+      log('Page loaded - ready for testing');
+      log(`Current domain: ${window.location.hostname}`);
+
+      const allowedDomains = [
+        'wallacemuseum.com',
+        'www.wallacemuseum.com',
+        'ipfs.wallacemuseum.com',
+        'localhost',
+        '127.0.0.1'
+      ];
+
+      const isAllowed = allowedDomains.some(domain =>
+        window.location.hostname === domain ||
+        window.location.hostname.endsWith('.' + domain)
+      );
+
+      if (isAllowed) {
+        log('✅ Current domain should be allowed');
+      } else {
+        log('❌ Current domain should be blocked');
+      }
+    });
+  </script>
+</body>
+
+</html>
