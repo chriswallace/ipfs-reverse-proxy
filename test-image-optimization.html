@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IPFS Image Optimization Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px; }
+        .test-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+        .test-item { border: 1px solid #ddd; padding: 15px; border-radius: 8px; }
+        .test-item img { max-width: 100%; height: auto; border-radius: 4px; }
+        .test-item h3 { margin-top: 0; color: #333; }
+        .test-item p { color: #666; font-size: 14px; }
+        .url { background: #f5f5f5; padding: 8px; border-radius: 4px; font-family: monospace; font-size: 12px; word-break: break-all; }
+    </style>
+</head>
+<body>
+    <h1>IPFS Image Optimization Test</h1>
+    <p>Replace <code>QmYourTestImageHash</code> with a real IPFS image hash to see the optimization in action.</p>
+    
+    <div class="test-grid">
+        <div class="test-item">
+            <h3>Basic Resize</h3>
+            <p>Resize image to 300px width</p>
+            <img src="https://ipfs.wallacemuseum.com/api/image?hash=QmYourTestImageHash&width=300" alt="Basic Resize" onerror="this.style.display='none'">
+            <div class="url">https://ipfs.wallacemuseum.com/api/image?hash=QmYourTestImageHash&width=300</div>
+        </div>
+        <div class="test-item">
+            <h3>WebP Conversion</h3>
+            <p>Convert to WebP format</p>
+            <img src="https://ipfs.wallacemuseum.com/api/image?hash=QmYourTestImageHash&width=300&format=webp" alt="WebP Conversion" onerror="this.style.display='none'">
+            <div class="url">https://ipfs.wallacemuseum.com/api/image?hash=QmYourTestImageHash&width=300&format=webp</div>
+        </div>
+        <div class="test-item">
+            <h3>Square Thumbnail</h3>
+            <p>Create 200x200 square thumbnail</p>
+            <img src="https://ipfs.wallacemuseum.com/api/image?hash=QmYourTestImageHash&width=200&height=200&fit=cover" alt="Square Thumbnail" onerror="this.style.display='none'">
+            <div class="url">https://ipfs.wallacemuseum.com/api/image?hash=QmYourTestImageHash&width=200&height=200&fit=cover</div>
+        </div>
+        <div class="test-item">
+            <h3>High Quality</h3>
+            <p>High quality WebP image</p>
+            <img src="https://ipfs.wallacemuseum.com/api/image?hash=QmYourTestImageHash&width=500&quality=90&format=webp" alt="High Quality" onerror="this.style.display='none'">
+            <div class="url">https://ipfs.wallacemuseum.com/api/image?hash=QmYourTestImageHash&width=500&quality=90&format=webp</div>
+        </div>
+        <div class="test-item">
+            <h3>Retina Ready</h3>
+            <p>2x DPR for retina displays</p>
+            <img src="https://ipfs.wallacemuseum.com/api/image?hash=QmYourTestImageHash&width=300&dpr=2&format=webp" alt="Retina Ready" onerror="this.style.display='none'">
+            <div class="url">https://ipfs.wallacemuseum.com/api/image?hash=QmYourTestImageHash&width=300&dpr=2&format=webp</div>
+        </div>
+        <div class="test-item">
+            <h3>Smart Crop</h3>
+            <p>Smart cropping with auto gravity</p>
+            <img src="https://ipfs.wallacemuseum.com/api/image?hash=QmYourTestImageHash&width=400&height=300&fit=cover&gravity=auto" alt="Smart Crop" onerror="this.style.display='none'">
+            <div class="url">https://ipfs.wallacemuseum.com/api/image?hash=QmYourTestImageHash&width=400&height=300&fit=cover&gravity=auto</div>
+        </div>
+        <div class="test-item">
+            <h3>AVIF Format</h3>
+            <p>Convert to AVIF format</p>
+            <img src="https://ipfs.wallacemuseum.com/api/image?hash=QmYourTestImageHash&width=300&format=avif" alt="AVIF Format" onerror="this.style.display='none'">
+            <div class="url">https://ipfs.wallacemuseum.com/api/image?hash=QmYourTestImageHash&width=300&format=avif</div>
+        </div>
+        <div class="test-item">
+            <h3>Sharpened</h3>
+            <p>Apply sharpening filter</p>
+            <img src="https://ipfs.wallacemuseum.com/api/image?hash=QmYourTestImageHash&width=300&sharpen=2&format=webp" alt="Sharpened" onerror="this.style.display='none'">
+            <div class="url">https://ipfs.wallacemuseum.com/api/image?hash=QmYourTestImageHash&width=300&sharpen=2&format=webp</div>
+        </div>
+        <div class="test-item">
+            <h3>Convenient Route</h3>
+            <p>Using convenient /image/ route</p>
+            <img src="https://ipfs.wallacemuseum.com/image/QmYourTestImageHash?width=300&format=webp" alt="Convenient Route" onerror="this.style.display='none'">
+            <div class="url">https://ipfs.wallacemuseum.com/image/QmYourTestImageHash?width=300&format=webp</div>
+        </div>
+        <div class="test-item">
+            <h3>Traditional Proxy</h3>
+            <p>Using traditional proxy with optimization</p>
+            <img src="https://ipfs.wallacemuseum.com/QmYourTestImageHash?width=300&format=webp" alt="Traditional Proxy" onerror="this.style.display='none'">
+            <div class="url">https://ipfs.wallacemuseum.com/QmYourTestImageHash?width=300&format=webp</div>
+        </div>
+    </div>
+    
+    <script>
+        console.log('Image optimization test page loaded');
+        console.log('Replace "QmYourTestImageHash" with a real IPFS image hash to test');
+    </script>
+</body>
+</html>

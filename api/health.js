@@ -20,13 +20,26 @@ module.exports = async (req, res) => {
       status: "healthy",
       timestamp: new Date().toISOString(),
       service: "ipfs-reverse-proxy",
-      version: "1.0.0",
+      version: "1.1.0",
+      features: {
+        imageOptimization: true,
+        responsiveImages: true,
+        formatConversion: true,
+        retinaSupport: true,
+        smartCropping: true,
+      },
+      supportedFormats: ["webp", "avif", "jpeg", "png"],
+      endpoints: {
+        proxy: "/api/proxy",
+        image: "/api/image",
+        health: "/api/health",
+      },
       environment: {
         hasApiKey: !!process.env.API_KEY,
         hasPinataJwt: !!process.env.PINATA_JWT,
         allowedOrigins: process.env.ALLOWED_ORIGINS
           ? process.env.ALLOWED_ORIGINS.split(",").length
-          : 0,
+          : 5, // Default hardcoded origins
         hasDedicatedGateway: !!process.env.PINATA_GATEWAY_DOMAIN,
       },
     };

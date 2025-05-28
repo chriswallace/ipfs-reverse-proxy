@@ -1,14 +1,16 @@
 {
   "name": "ipfs-reverse-proxy",
-  "version": "1.0.0",
-  "description": "A reverse proxy media server for Pinata IPFS gateway",
+  "version": "1.1.0",
+  "description": "A reverse proxy media server for Pinata IPFS gateway with image optimization",
   "main": "api/proxy.js",
   "scripts": {
     "build": "echo 'No build step required'",
     "start": "node api/proxy.js",
     "test": "node test/test-proxy.js",
     "test:local": "node test/test-proxy.js local",
-    "test:production": "node test/test-proxy.js production"
+    "test:production": "node test/test-proxy.js production",
+    "test:image": "node examples/test-image-optimization.js",
+    "test:image:html": "node examples/test-image-optimization.js --generate-html"
   },
   "dependencies": {
     "axios": "^1.6.0",
@@ -22,7 +24,11 @@
     "pinata",
     "reverse-proxy",
     "media-server",
-    "vercel"
+    "vercel",
+    "image-optimization",
+    "webp",
+    "avif",
+    "responsive-images"
   ],
   "author": "",
   "license": "MIT"

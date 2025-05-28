@@ -2,6 +2,9 @@
   "functions": {
     "api/proxy.js": {
       "maxDuration": 30
+    },
+    "api/image.js": {
+      "maxDuration": 30
     }
   },
   "rewrites": [
@@ -12,6 +15,10 @@
     {
       "source": "/gateway/(.*)",
       "destination": "/api/proxy?hash=$1"
+    },
+    {
+      "source": "/image/(Qm[1-9A-HJ-NP-Za-km-z]{44}|bafy[a-z2-7]{55})",
+      "destination": "/api/image?hash=$1"
     },
     {
       "source": "/(Qm[1-9A-HJ-NP-Za-km-z]{44}|bafy[a-z2-7]{55})(.*)",

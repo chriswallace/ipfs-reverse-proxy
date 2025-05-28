@@ -14,6 +14,8 @@ A secure reverse proxy media server for Pinata IPFS gateway that can be deployed
 - ⚡ **Fast**: Streams content directly without buffering
 - 🌐 **Custom Domain Support**: Works with custom domains like `ipfs.wallacemuseum.com`
 - 🌍 **No API Keys Required**: Public access for legitimate browser requests
+- 🔄 **Fallback Gateways**: Automatically tries multiple IPFS gateways if content is not found
+- 🎨 **Image Optimization**: Advanced image processing with format conversion, resizing, and optimization
 
 ## Quick Start
 
@@ -140,6 +142,212 @@ const health = await fetch("https://ipfs.wallacemuseum.com/api/health");
 console.log(await health.json());
 ```
 
+## Fallback Gateway Support
+
+The proxy includes automatic fallback functionality to ensure maximum content availability. If your dedicated gateway doesn't have a specific CID, the proxy will automatically try multiple public IPFS gateways.
+
+### How Fallback Works
+
+1. **Primary Request**: First tries your dedicated gateway (if configured)
+2. **Fallback on 404**: If content is not found (404), automatically tries:
+   - `ipfs.io`
+   - `dweb.link`
+   - `gateway.pinata.cloud`
+3. **Best Effort**: Returns content from the first gateway that has it
+4. **Graceful Degradation**: Returns 404 only if no gateway has the content
+
+### Fallback Behavior
+
+```javascript
+// This request will try multiple gateways automatically
+const response = await fetch("https://ipfs.wallacemuseum.com/QmSomeRareHash");
+
+// If found on a fallback gateway, you'll get the content normally
+// If not found anywhere, you'll get a 404
+```
+
+### Important Notes
+
+- **Image Optimization**: Fallback only works for regular content. Image optimization requires the dedicated gateway's `/files/` endpoint
+- **Path Support**: Fallback works with paths (e.g., `/QmHash/readme.txt`)
+- **Performance**: Fallback adds latency only when content is not found on the primary gateway
+- **Automatic**: No configuration needed - fallback is enabled by default
+
+### Fallback Headers
+
+When content is served from a fallback gateway, the response includes special headers:
+
+```javascript
+const response = await fetch("https://ipfs.wallacemuseum.com/QmRareHash");
+
+// Check if content came from fallback
+if (response.headers.get("X-Fallback-Gateway")) {
+  console.log("Content served from fallback gateway");
+}
+
+// For image optimization fallbacks (serves original image)
+if (response.headers.get("X-Image-Optimization") === "unavailable") {
+  console.log("Image optimization not available, serving original");
+}
+```
+
+## Image Optimization
+
+The proxy now includes powerful image optimization capabilities powered by Pinata's image optimization features. Transform, resize, and optimize images on-the-fly for better performance and user experience.
+
+**Note:** Image optimization requests use Pinata's `/files/{cid}` endpoint (as per [Pinata's documentation](https://docs.pinata.cloud/gateways/image-optimizations)) rather than the traditional `/ipfs/{cid}` endpoint. This ensures proper access to all image optimization features.
+
+### Basic Image Optimization
+
+```html
+<!-- Original image -->
+<img src="https://ipfs.wallacemuseum.com/QmYourImageHash" alt="Original" />
+
+<!-- Resized to 300px width -->
+<img
+  src="https://ipfs.wallacemuseum.com/api/image?hash=QmYourImageHash&width=300"
+  alt="Resized"
+/>
+
+<!-- Converted to WebP format -->
+<img
+  src="https://ipfs.wallacemuseum.com/QmYourImageHash?width=300&format=webp"
+  alt="WebP"
+/>
+```
+
+### URL Patterns for Image Optimization
+
+The proxy supports multiple URL patterns for image optimization:
+
+```javascript
+// Direct API endpoint (recommended)
+"https://ipfs.wallacemuseum.com/api/image?hash=QmYourHash&width=500&format=webp";
+
+// Convenient route
+"https://ipfs.wallacemuseum.com/image/QmYourHash?width=500&format=webp";
+
+// Traditional proxy with optimization parameters
+"https://ipfs.wallacemuseum.com/QmYourHash?width=500&format=webp";
+```
+
+### Image Optimization Parameters
+
+| Parameter   | Type    | Description                    | Example Values                                     |
+| ----------- | ------- | ------------------------------ | -------------------------------------------------- |
+| `width`     | number  | Maximum width in pixels        | `300`, `500`, `1200`                               |
+| `height`    | number  | Maximum height in pixels       | `200`, `400`, `800`                                |
+| `dpr`       | number  | Device pixel ratio (1-3)       | `1`, `2`, `3`                                      |
+| `fit`       | string  | How to fit image in dimensions | `contain`, `cover`, `crop`, `scale-down`, `pad`    |
+| `gravity`   | string  | Focus point for cropping       | `auto`, `center`, `top`, `bottom`, `left`, `right` |
+| `quality`   | number  | JPEG/WebP quality (1-100)      | `30`, `60`, `85`, `90`                             |
+| `format`    | string  | Output format                  | `auto`, `webp`, `avif`, `jpeg`, `png`              |
+| `animation` | boolean | Preserve animations            | `true`, `false`                                    |
+| `sharpen`   | number  | Sharpening strength (0-10)     | `1`, `2`, `5`                                      |
+| `metadata`  | string  | Metadata handling              | `keep`, `copyright`, `none`                        |
+
+### Responsive Images
+
+Create responsive images with multiple sizes:
+
+```html
+<img
+  src="https://ipfs.wallacemuseum.com/api/image?hash=QmYourHash&width=600&format=webp"
+  srcset="
+    https://ipfs.wallacemuseum.com/api/image?hash=QmYourHash&width=300&format=webp 300w,
+    https://ipfs.wallacemuseum.com/api/image?hash=QmYourHash&width=600&format=webp 600w,
+    https://ipfs.wallacemuseum.com/api/image?hash=QmYourHash&width=900&format=webp 900w
+  "
+  sizes="(max-width: 600px) 300px, (max-width: 900px) 600px, 900px"
+  alt="Responsive image"
+/>
+```
+
+### Retina/High-DPI Support
+
+```html
+<!-- Standard approach -->
+<img
+  src="https://ipfs.wallacemuseum.com/api/image?hash=QmYourHash&width=300&format=webp"
+  srcset="
+    https://ipfs.wallacemuseum.com/api/image?hash=QmYourHash&width=300&format=webp       1x,
+    https://ipfs.wallacemuseum.com/api/image?hash=QmYourHash&width=300&dpr=2&format=webp 2x
+  "
+  alt="Retina ready"
+/>
+
+<!-- Using DPR parameter -->
+<img
+  src="https://ipfs.wallacemuseum.com/api/image?hash=QmYourHash&width=300&dpr=2&format=webp"
+  alt="2x DPR"
+/>
+```
+
+### Advanced Examples
+
+```javascript
+// Smart cropping with auto gravity
+const smartCrop =
+  "https://ipfs.wallacemuseum.com/api/image?hash=QmYourHash&width=400&height=300&fit=cover&gravity=auto";
+
+// High quality with sharpening
+const sharpened =
+  "https://ipfs.wallacemuseum.com/api/image?hash=QmYourHash&width=500&quality=90&sharpen=2&format=webp";
+
+// Thumbnail with aggressive compression
+const thumbnail =
+  "https://ipfs.wallacemuseum.com/api/image?hash=QmYourHash&width=150&height=150&fit=cover&quality=60&format=webp";
+
+// AVIF format for maximum compression (with WebP fallback)
+const avifImage =
+  "https://ipfs.wallacemuseum.com/api/image?hash=QmYourHash&width=500&format=avif";
+```
+
+### JavaScript Helper Library
+
+Use the included JavaScript helper for easier image optimization:
+
+```javascript
+// Import the helper (see examples/image-optimization.js)
+import { IPFSImageOptimizer } from "./examples/image-optimization.js";
+
+const optimizer = new IPFSImageOptimizer("https://ipfs.wallacemuseum.com");
+
+// Build optimized URLs
+const url = optimizer.buildUrl("QmYourHash", {
+  width: 500,
+  format: "webp",
+  quality: 85,
+});
+
+// Create responsive srcset
+const srcset = optimizer.createSrcSet("QmYourHash", [300, 600, 900], {
+  format: "webp",
+});
+
+// Generate retina URLs
+const retinaUrls = optimizer.createRetinaUrls("QmYourHash", 300, {
+  format: "webp",
+});
+```
+
+### Performance Best Practices
+
+1. **Use WebP/AVIF formats** for better compression
+2. **Implement responsive images** with appropriate sizes
+3. **Optimize quality settings** (60-85 for most use cases)
+4. **Use appropriate fit modes** (`cover` for thumbnails, `contain` for full images)
+5. **Enable retina support** for high-DPI displays
+6. **Preload critical images** above the fold
+7. **Lazy load** images below the fold
+
+### Examples
+
+See the `examples/` directory for complete examples:
+
+- `examples/image-optimization.html` - Visual examples with different optimization settings
+- `examples/image-optimization.js` - JavaScript helper library and usage examples
+
 ## API Reference
 
 ### `GET /[cid]` (New!)
@@ -174,6 +382,51 @@ Proxies requests to Pinata IPFS gateway.
 - `gateway` (optional): Use `dedicated` for dedicated gateway
 
 **Authentication:** Domain-based (no API key required)
+
+### `GET /api/image` (New!)
+
+Optimized image serving with transformation capabilities.
+
+**Query Parameters:**
+
+- `hash` (required): The IPFS hash of the image to retrieve
+- `width` (optional): Maximum width in pixels
+- `height` (optional): Maximum height in pixels
+- `dpr` (optional): Device pixel ratio (1-3), default: 1
+- `fit` (optional): Resize mode - `scale-down`, `contain`, `cover`, `crop`, `pad`, default: `contain`
+- `gravity` (optional): Focus point for cropping - `auto`, `center`, `top`, `bottom`, `left`, `right`
+- `quality` (optional): Image quality (1-100), default: 85
+- `format` (optional): Output format - `auto`, `webp`, `avif`, `jpeg`, `png`, default: `auto`
+- `animation` (optional): Preserve animations - `true`, `false`, default: `true`
+- `sharpen` (optional): Sharpening strength (0-10)
+- `metadata` (optional): Metadata handling - `keep`, `copyright`, `none`, default: `copyright`
+- `gateway` (optional): Use `dedicated` for dedicated gateway
+
+**Authentication:** Domain-based (no API key required)
+
+**Example:**
+
+```
+GET /api/image?hash=QmYourImageHash&width=500&height=300&format=webp&quality=85
+```
+
+### `GET /image/[cid]` (New!)
+
+Convenient route for image optimization.
+
+**Path Parameters:**
+
+- `cid`: Valid IPFS hash (Qm... or bafy...)
+
+**Query Parameters:** Same as `/api/image` (except `hash`)
+
+**Authentication:** Domain-based (no API key required)
+
+**Example:**
+
+```
+GET /image/QmYourImageHash?width=500&format=webp
+```
 
 ### `GET /api/health`
 

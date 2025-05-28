@@ -13,13 +13,159 @@ const ALLOWED_ORIGINS = [
   "https://ipfs.wallacemuseum.com",
 ];
 
-if (!PINATA_JWT) {
-  console.error("PINATA_JWT environment variable is required");
+// PINATA_JWT is only required when using a dedicated gateway
+if (process.env.PINATA_GATEWAY_DOMAIN && !PINATA_JWT) {
+  console.error(
+    "PINATA_JWT environment variable is required when using a dedicated gateway"
+  );
 }
 
 // API_KEY is optional for public image serving
 if (API_KEY) {
   console.log("API_KEY provided but not required for public image serving");
+}
+
+// Image optimization parameter mapping
+const IMAGE_OPTIMIZATION_PARAMS = {
+  // Width and height
+  width: "img-width",
+  height: "img-height",
+  "img-width": "img-width",
+  "img-height": "img-height",
+
+  // Device pixel ratio
+  dpr: "img-dpr",
+  "img-dpr": "img-dpr",
+
+  // Fit modes
+  fit: "img-fit",
+  "img-fit": "img-fit",
+
+  // Gravity/focus point
+  gravity: "img-gravity",
+  "img-gravity": "img-gravity",
+
+  // Quality
+  quality: "img-quality",
+  "img-quality": "img-quality",
+
+  // Format
+  format: "img-format",
+  "img-format": "img-format",
+
+  // Animation
+  anim: "img-anim",
+  animation: "img-anim",
+  "img-anim": "img-anim",
+
+  // Sharpening
+  sharpen: "img-sharpen",
+  "img-sharpen": "img-sharpen",
+
+  // Error handling
+  onerror: "img-onerror",
+  "img-onerror": "img-onerror",
+
+  // Metadata
+  metadata: "img-metadata",
+  "img-metadata": "img-metadata",
+};
+
+// Helper function to process image optimization parameters
+function processImageOptimizationParams(queryParams) {
+  const imageParams = new URLSearchParams();
+  const otherParams = new URLSearchParams();
+
+  Object.entries(queryParams).forEach(([key, value]) => {
+    // Skip our internal parameters
+    if (["hash", "gateway", "path"].includes(key)) {
+      return;
+    }
+
+    // Check if this is an image optimization parameter
+    const mappedParam = IMAGE_OPTIMIZATION_PARAMS[key];
+    if (mappedParam) {
+      // Validate and transform the parameter value if needed
+      let processedValue = value;
+
+      // Validate fit parameter values
+      if (mappedParam === "img-fit") {
+        const validFitValues = [
+          "scale-down",
+          "contain",
+          "cover",
+          "crop",
+          "pad",
+        ];
+        if (!validFitValues.includes(value)) {
+          console.warn(`Invalid img-fit value: ${value}. Using default.`);
+          return; // Skip invalid fit values
+        }
+      }
+
+      // Validate format parameter values
+      if (mappedParam === "img-format") {
+        const validFormatValues = ["auto", "webp", "avif", "jpeg", "png"];
+        if (!validFormatValues.includes(value)) {
+          console.warn(`Invalid img-format value: ${value}. Using default.`);
+          return; // Skip invalid format values
+        }
+      }
+
+      // Validate metadata parameter values
+      if (mappedParam === "img-metadata") {
+        const validMetadataValues = ["keep", "copyright", "none"];
+        if (!validMetadataValues.includes(value)) {
+          console.warn(`Invalid img-metadata value: ${value}. Using default.`);
+          return; // Skip invalid metadata values
+        }
+      }
+
+      // Validate onerror parameter values
+      if (mappedParam === "img-onerror") {
+        const validOnErrorValues = ["redirect"];
+        if (!validOnErrorValues.includes(value)) {
+          console.warn(`Invalid img-onerror value: ${value}. Using default.`);
+          return; // Skip invalid onerror values
+        }
+      }
+
+      // Validate numeric parameters
+      if (
+        [
+          "img-width",
+          "img-height",
+          "img-quality",
+          "img-dpr",
+          "img-sharpen",
+        ].includes(mappedParam)
+      ) {
+        const numValue = parseFloat(value);
+        if (isNaN(numValue) || numValue <= 0) {
+          console.warn(`Invalid numeric value for ${mappedParam}: ${value}`);
+          return; // Skip invalid numeric values
+        }
+
+        // Additional validation for specific parameters
+        if (mappedParam === "img-quality" && (numValue < 1 || numValue > 100)) {
+          console.warn(`img-quality must be between 1-100, got: ${value}`);
+          return;
+        }
+
+        if (mappedParam === "img-sharpen" && (numValue < 0 || numValue > 10)) {
+          console.warn(`img-sharpen must be between 0-10, got: ${value}`);
+          return;
+        }
+      }
+
+      imageParams.append(mappedParam, processedValue);
+    } else {
+      // Keep other parameters as-is
+      otherParams.append(key, value);
+    }
+  });
+
+  return { imageParams, otherParams };
 }
 
 // CORS headers - will be dynamically set based on origin
@@ -126,115 +272,184 @@ module.exports = async (req, res) => {
       });
     }
 
-    // Determine the gateway to use
-    const useDedicatedGateway = gateway === "dedicated";
-    const hasDedicatedGateway = process.env.PINATA_GATEWAY_DOMAIN;
+    // Process image optimization parameters and other query parameters
+    const { imageParams, otherParams: processedOtherParams } =
+      processImageOptimizationParams(otherParams);
 
-    const gatewayUrl =
-      useDedicatedGateway && hasDedicatedGateway
-        ? `https://${process.env.PINATA_GATEWAY_DOMAIN}`
-        : "https://gateway.pinata.cloud";
+    // Use the correct endpoint based on whether image optimization is requested
+    const hasImageOptimization = imageParams.toString().length > 0;
 
-    // Construct the Pinata gateway URL with path and query parameters
-    let pinataUrl = `${gatewayUrl}/ipfs/${ipfsHash}`;
+    // Always use the dedicated gateway if configured, fallback to public
+    const gatewayUrl = process.env.PINATA_GATEWAY_DOMAIN
+      ? `https://${process.env.PINATA_GATEWAY_DOMAIN}`
+      : "https://gateway.pinata.cloud";
 
-    // Add path if provided (from URL path after the hash)
-    if (path) {
-      pinataUrl += path;
+    if (hasImageOptimization) {
+      // Use /files/{cid} endpoint for image optimization
+      pinataUrl = `${gatewayUrl}/files/${ipfsHash}`;
+
+      // Note: path parameters are not supported with image optimization
+      if (path) {
+        console.warn(
+          "Path parameters are not supported with image optimization, ignoring path:",
+          path
+        );
+      }
+    } else {
+      // If there's a path, use public gateway since /files/ endpoint doesn't support paths
+      if (path && process.env.PINATA_GATEWAY_DOMAIN) {
+        console.log(
+          "Path parameter detected, using public gateway for compatibility"
+        );
+        pinataUrl = `https://gateway.pinata.cloud/ipfs/${ipfsHash}${path}`;
+      } else if (process.env.PINATA_GATEWAY_DOMAIN) {
+        // Use /files/{cid} endpoint for dedicated gateway (no path)
+        pinataUrl = `${gatewayUrl}/files/${ipfsHash}`;
+      } else {
+        // Use traditional /ipfs/{cid} endpoint for public gateway
+        pinataUrl = `${gatewayUrl}/ipfs/${ipfsHash}`;
+        if (path) {
+          pinataUrl += path;
+        }
+      }
     }
 
-    // Add query parameters (excluding our internal params)
-    const queryParams = new URLSearchParams();
-    Object.entries(otherParams).forEach(([key, value]) => {
-      if (key !== "hash" && key !== "gateway" && key !== "path") {
-        queryParams.append(key, value);
-      }
+    // Combine all query parameters
+    const allParams = new URLSearchParams();
+
+    // Add image optimization parameters first
+    imageParams.forEach((value, key) => {
+      allParams.append(key, value);
     });
 
-    if (queryParams.toString()) {
-      pinataUrl += `?${queryParams.toString()}`;
+    // Add other parameters
+    processedOtherParams.forEach((value, key) => {
+      allParams.append(key, value);
+    });
+
+    if (allParams.toString()) {
+      pinataUrl += `?${allParams.toString()}`;
     }
 
     console.log(`Proxying request to: ${pinataUrl}`);
 
+    // Log image optimization parameters if any are present
+    if (imageParams.toString()) {
+      console.log(`Image optimization parameters: ${imageParams.toString()}`);
+    }
+
+    // Fallback gateways to try if the dedicated gateway doesn't have the content
+    const fallbackGateways = [
+      "https://ipfs.io",
+      "https://dweb.link",
+      "https://gateway.pinata.cloud",
+    ];
+
     // Function to make request to gateway
     const makeRequest = async (url, checkForHtmlRestriction = false) => {
+      const headers = {
+        "User-Agent": "IPFS-Reverse-Proxy/1.0.0",
+        // Forward relevant headers from the original request
+        ...(req.headers["range"] && { Range: req.headers["range"] }),
+        ...(req.headers["if-none-match"] && {
+          "If-None-Match": req.headers["if-none-match"],
+        }),
+        ...(req.headers["if-modified-since"] && {
+          "If-Modified-Since": req.headers["if-modified-since"],
+        }),
+      };
+
+      // Add Authorization header when using dedicated gateway (not for public gateway paths)
+      const isUsingDedicatedGateway =
+        process.env.PINATA_GATEWAY_DOMAIN &&
+        url.includes(process.env.PINATA_GATEWAY_DOMAIN) &&
+        !url.includes("gateway.pinata.cloud");
+
+      if (isUsingDedicatedGateway && PINATA_JWT) {
+        headers.Authorization = `Bearer ${PINATA_JWT}`;
+      }
+
       return await axios({
         method: req.method,
         url: url,
-        headers: {
-          Authorization: `Bearer ${PINATA_JWT}`,
-          "User-Agent": "IPFS-Reverse-Proxy/1.0.0",
-          // Forward relevant headers from the original request
-          ...(req.headers["range"] && { Range: req.headers["range"] }),
-          ...(req.headers["if-none-match"] && {
-            "If-None-Match": req.headers["if-none-match"],
-          }),
-          ...(req.headers["if-modified-since"] && {
-            "If-Modified-Since": req.headers["if-modified-since"],
-          }),
-        },
+        headers: headers,
         responseType: checkForHtmlRestriction ? "text" : "stream",
         validateStatus: (status) => status < 500, // Don't throw on 4xx errors
         timeout: 25000, // 25 second timeout (less than Vercel's 30s limit)
       });
     };
 
-    // Make request to Pinata gateway
+    // Function to try fallback gateways
+    const tryFallbackGateways = async () => {
+      // Only try fallbacks for regular content (not image optimization)
+      if (hasImageOptimization) {
+        return null; // Image optimization requires dedicated gateway
+      }
+
+      for (const fallbackGateway of fallbackGateways) {
+        try {
+          console.log(`Trying fallback gateway: ${fallbackGateway}`);
+
+          // Construct fallback URL using /ipfs/ endpoint
+          let fallbackUrl = `${fallbackGateway}/ipfs/${ipfsHash}`;
+          if (path) {
+            fallbackUrl += path;
+          }
+
+          // Add non-image-optimization parameters
+          if (processedOtherParams.toString()) {
+            fallbackUrl += `?${processedOtherParams.toString()}`;
+          }
+
+          // Make request without authentication (public gateways)
+          const fallbackResponse = await axios({
+            method: req.method,
+            url: fallbackUrl,
+            headers: {
+              "User-Agent": "IPFS-Reverse-Proxy/1.0.0",
+              // Forward relevant headers from the original request
+              ...(req.headers["range"] && { Range: req.headers["range"] }),
+              ...(req.headers["if-none-match"] && {
+                "If-None-Match": req.headers["if-none-match"],
+              }),
+              ...(req.headers["if-modified-since"] && {
+                "If-Modified-Since": req.headers["if-modified-since"],
+              }),
+            },
+            responseType: "stream",
+            validateStatus: (status) => status < 500,
+            timeout: 15000, // Shorter timeout for fallbacks
+          });
+
+          if (fallbackResponse.status === 200) {
+            console.log(
+              `Successfully found content on fallback gateway: ${fallbackGateway}`
+            );
+            return fallbackResponse;
+          }
+        } catch (error) {
+          console.log(
+            `Fallback gateway ${fallbackGateway} failed: ${error.message}`
+          );
+          continue; // Try next gateway
+        }
+      }
+
+      return null; // No fallback succeeded
+    };
+
+    // Make request to primary gateway
     let response = await makeRequest(pinataUrl, true); // Check for HTML restriction first
 
-    // If we get a 403 error and it's likely HTML content restriction, try dedicated gateway
-    if (
-      response.status === 403 &&
-      !useDedicatedGateway &&
-      hasDedicatedGateway
-    ) {
-      const errorText = response.data || "";
+    // If we got a 404 from the dedicated gateway, try fallback gateways
+    if (response.status === 404 && process.env.PINATA_GATEWAY_DOMAIN) {
+      console.log(
+        `Content not found on dedicated gateway, trying fallbacks...`
+      );
+      const fallbackResponse = await tryFallbackGateways();
 
-      if (
-        errorText.includes("HTML content cannot be served") ||
-        errorText.includes("ERR_ID:00023")
-      ) {
-        console.log(
-          "Retrying with dedicated gateway due to HTML content restriction"
-        );
-        const dedicatedGatewayUrl = `https://${process.env.PINATA_GATEWAY_DOMAIN}`;
-        let dedicatedPinataUrl = `${dedicatedGatewayUrl}/ipfs/${ipfsHash}`;
-
-        if (path) {
-          dedicatedPinataUrl += path;
-        }
-
-        if (queryParams.toString()) {
-          dedicatedPinataUrl += `?${queryParams.toString()}`;
-        }
-
-        console.log(`Retrying with dedicated gateway: ${dedicatedPinataUrl}`);
-        response = await makeRequest(dedicatedPinataUrl); // Use stream for actual content
-      }
-    } else if (
-      response.status === 403 &&
-      !useDedicatedGateway &&
-      !hasDedicatedGateway
-    ) {
-      const errorText = response.data || "";
-      if (
-        errorText.includes("HTML content cannot be served") ||
-        errorText.includes("ERR_ID:00023")
-      ) {
-        console.log(
-          "HTML content restriction detected but no dedicated gateway configured"
-        );
-        // Return a more helpful error message
-        return res.status(403).json({
-          error: "HTML Content Restriction",
-          message:
-            "This IPFS content contains HTML which cannot be served through the public gateway. A dedicated Pinata gateway is required. Please configure PINATA_GATEWAY_DOMAIN environment variable.",
-          ipfsHash: ipfsHash,
-          suggestedUrl: `https://gateway.pinata.cloud/ipfs/${ipfsHash}${
-            path || ""
-          }${queryParams.toString() ? `?${queryParams.toString()}` : ""}`,
-        });
+      if (fallbackResponse) {
+        response = fallbackResponse;
       }
     }
 
