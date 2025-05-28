@@ -104,6 +104,20 @@ The proxy supports multiple URL patterns:
 "https://ipfs.wallacemuseum.com/api/proxy?hash=QmYourIPFSHash"; // API endpoint
 ```
 
+### Code URIs and Query Parameters
+
+The proxy fully supports code URIs with query parameters, commonly used for generative art and interactive content:
+
+```javascript
+// Code URI with query parameters (fx(hash) style)
+"https://ipfs.wallacemuseum.com/QmYourCodeHash/?fxhash=abc123&fxiteration=42&fxminter=tz1abc";
+
+// Any query parameters are preserved and forwarded to the IPFS gateway
+"https://ipfs.wallacemuseum.com/QmYourHash/?param1=value1&param2=value2";
+```
+
+**⚠️ HTML Content Restriction:** Pinata's public gateway blocks HTML content for security reasons. For HTML/code content, you **must** configure a dedicated Pinata gateway using the `PINATA_GATEWAY_DOMAIN` environment variable. The proxy will automatically retry with the dedicated gateway when it detects HTML content restrictions.
+
 ### Using Dedicated Gateway
 
 If you have a dedicated Pinata gateway:
@@ -196,11 +210,13 @@ Health check endpoint.
 
 ### Environment Variables
 
-| Variable                | Required | Description                              |
-| ----------------------- | -------- | ---------------------------------------- |
-| `PINATA_JWT`            | Yes      | Your Pinata JWT token from the dashboard |
-| `API_KEY`               | No       | Not used for public image serving        |
-| `PINATA_GATEWAY_DOMAIN` | No       | Your dedicated gateway domain            |
+| Variable                | Required  | Description                                                    |
+| ----------------------- | --------- | -------------------------------------------------------------- |
+| `PINATA_JWT`            | Yes       | Your Pinata JWT token from the dashboard                       |
+| `API_KEY`               | No        | Not used for public image serving                              |
+| `PINATA_GATEWAY_DOMAIN` | **Yes\*** | Your dedicated gateway domain (required for HTML/code content) |
+
+**\*Required for HTML content:** While technically optional, `PINATA_GATEWAY_DOMAIN` is required if you need to serve HTML content, code URIs, or any content that Pinata's public gateway restricts.
 
 ### Allowed Domains
 

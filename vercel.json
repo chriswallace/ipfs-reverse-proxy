@@ -14,8 +14,8 @@
       "destination": "/api/proxy?hash=$1"
     },
     {
-      "source": "/(Qm[1-9A-HJ-NP-Za-km-z]{44}|bafy[a-z2-7]{55})",
-      "destination": "/api/proxy?hash=$1"
+      "source": "/(Qm[1-9A-HJ-NP-Za-km-z]{44}|bafy[a-z2-7]{55})(.*)",
+      "destination": "/api/proxy?hash=$1&path=$2"
     }
   ],
   "headers": [
