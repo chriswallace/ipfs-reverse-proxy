@@ -365,6 +365,44 @@ module.exports = async (req, res) => {
     // Forward status code
     res.status(finalResponse.status);
 
+    // If the response is not successful, handle it as an error
+    if (finalResponse.status >= 400) {
+      // For error responses, try to parse as JSON if possible
+      try {
+        // For stream responses with errors, we need to read the stream
+        const chunks = [];
+        finalResponse.data.on("data", (chunk) => chunks.push(chunk));
+        await new Promise((resolve, reject) => {
+          finalResponse.data.on("end", resolve);
+          finalResponse.data.on("error", reject);
+        });
+        const errorText = Buffer.concat(chunks).toString();
+
+        let errorData;
+        try {
+          errorData = JSON.parse(errorText);
+        } catch {
+          errorData = { message: errorText || finalResponse.statusText };
+        }
+
+        return res.json({
+          error: "Gateway Error",
+          message:
+            errorData.message ||
+            finalResponse.statusText ||
+            "Error from gateway",
+          status: finalResponse.status,
+          details: errorData,
+        });
+      } catch (parseError) {
+        return res.json({
+          error: "Gateway Error",
+          message: finalResponse.statusText || "Error from gateway",
+          status: finalResponse.status,
+        });
+      }
+    }
+
     // Forward relevant headers from Pinata response
     const headersToForward = [
       "content-type",
@@ -386,8 +424,13 @@ module.exports = async (req, res) => {
     // Set optimized caching headers for images
     res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
 
-    // Pipe the response
-    finalResponse.data.pipe(res);
+    // Only pipe successful responses
+    if (finalResponse.data && typeof finalResponse.data.pipe === "function") {
+      finalResponse.data.pipe(res);
+    } else {
+      // For non-stream responses (shouldn't happen with successful requests, but safety check)
+      res.send(finalResponse.data);
+    }
   } catch (error) {
     console.error("Image optimization error:", error.message);
 

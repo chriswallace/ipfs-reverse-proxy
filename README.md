@@ -96,15 +96,23 @@ The proxy automatically restricts access to these domains:
 
 ### Using URL Rewrites
 
-The proxy supports multiple URL patterns:
+The proxy supports multiple URL patterns and handles directories and files seamlessly:
 
 ```javascript
 // All of these work:
-"https://ipfs.wallacemuseum.com/QmYourIPFSHash"; // Direct CID
+"https://ipfs.wallacemuseum.com/QmYourIPFSHash"; // Direct CID (file or directory)
+"https://ipfs.wallacemuseum.com/QmYourIPFSHash/"; // Directory with trailing slash
+"https://ipfs.wallacemuseum.com/QmYourIPFSHash/file.txt"; // File within directory
 "https://ipfs.wallacemuseum.com/ipfs/QmYourIPFSHash"; // IPFS path
 "https://ipfs.wallacemuseum.com/gateway/QmYourIPFSHash"; // Gateway path
 "https://ipfs.wallacemuseum.com/api/proxy?hash=QmYourIPFSHash"; // API endpoint
 ```
+
+**📁 Directory Handling**: The proxy correctly handles IPFS directories:
+
+- `QmHash` - Works for both files and directories
+- `QmHash/` - Explicitly requests directory listing (recommended for directories)
+- `QmHash/file.txt` - Access specific files within directories
 
 ### Code URIs and Query Parameters
 
@@ -534,3 +542,9 @@ The proxy handles various error scenarios:
 ## License
 
 MIT
+
+**Technical Details:**
+
+- **Regular Content**: Uses standard `/ipfs/{cid}{path}` endpoint for maximum compatibility with directories, files, and nested paths
+- **Image Optimization**: Uses Pinata's `/files/{cid}` endpoint (as per [Pinata's documentation](https://docs.pinata.cloud/gateways/image-optimizations)) with `img-` prefixed parameters for advanced image processing
+- **Fallback System**: Automatically tries multiple public IPFS gateways when content is restricted on dedicated gateways

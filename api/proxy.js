@@ -296,22 +296,9 @@ module.exports = async (req, res) => {
         );
       }
     } else {
-      // If there's a path, use public gateway since /files/ endpoint doesn't support paths
-      if (path && process.env.PINATA_GATEWAY_DOMAIN) {
-        console.log(
-          "Path parameter detected, using public gateway for compatibility"
-        );
-        pinataUrl = `https://gateway.pinata.cloud/ipfs/${ipfsHash}${path}`;
-      } else if (process.env.PINATA_GATEWAY_DOMAIN) {
-        // Use /files/{cid} endpoint for dedicated gateway (no path)
-        pinataUrl = `${gatewayUrl}/files/${ipfsHash}`;
-      } else {
-        // Use traditional /ipfs/{cid} endpoint for public gateway
-        pinataUrl = `${gatewayUrl}/ipfs/${ipfsHash}`;
-        if (path) {
-          pinataUrl += path;
-        }
-      }
+      // For regular content, use simple /ipfs/{hash}{path} approach
+      // This handles directories, files, and nested paths correctly
+      pinataUrl = `${gatewayUrl}/ipfs/${ipfsHash}${path || ""}`;
     }
 
     // Combine all query parameters
@@ -391,10 +378,7 @@ module.exports = async (req, res) => {
           console.log(`Trying fallback gateway: ${fallbackGateway}`);
 
           // Construct fallback URL using /ipfs/ endpoint
-          let fallbackUrl = `${fallbackGateway}/ipfs/${ipfsHash}`;
-          if (path) {
-            fallbackUrl += path;
-          }
+          let fallbackUrl = `${fallbackGateway}/ipfs/${ipfsHash}${path || ""}`;
 
           // Add non-image-optimization parameters
           if (processedOtherParams.toString()) {
@@ -441,10 +425,13 @@ module.exports = async (req, res) => {
     // Make request to primary gateway
     let response = await makeRequest(pinataUrl, true); // Check for HTML restriction first
 
-    // If we got a 404 from the dedicated gateway, try fallback gateways
-    if (response.status === 404 && process.env.PINATA_GATEWAY_DOMAIN) {
+    // If we got a 404 or 401 from the dedicated gateway, try fallback gateways
+    if (
+      (response.status === 404 || response.status === 401) &&
+      process.env.PINATA_GATEWAY_DOMAIN
+    ) {
       console.log(
-        `Content not found on dedicated gateway, trying fallbacks...`
+        `Content not found or restricted on dedicated gateway (status: ${response.status}), trying fallbacks...`
       );
       const fallbackResponse = await tryFallbackGateways();
 
@@ -460,6 +447,50 @@ module.exports = async (req, res) => {
 
     // Forward status code
     res.status(response.status);
+
+    // If the response is not successful, handle it as an error
+    if (response.status >= 400) {
+      // For error responses, try to parse as JSON if possible
+      try {
+        let errorData;
+        if (response.config.responseType === "text") {
+          // If it's text, try to parse as JSON
+          try {
+            errorData = JSON.parse(response.data);
+          } catch {
+            errorData = { message: response.data || response.statusText };
+          }
+        } else {
+          // For stream responses with errors, we need to read the stream
+          const chunks = [];
+          response.data.on("data", (chunk) => chunks.push(chunk));
+          await new Promise((resolve, reject) => {
+            response.data.on("end", resolve);
+            response.data.on("error", reject);
+          });
+          const errorText = Buffer.concat(chunks).toString();
+          try {
+            errorData = JSON.parse(errorText);
+          } catch {
+            errorData = { message: errorText || response.statusText };
+          }
+        }
+
+        return res.json({
+          error: "Gateway Error",
+          message:
+            errorData.message || response.statusText || "Error from gateway",
+          status: response.status,
+          details: errorData,
+        });
+      } catch (parseError) {
+        return res.json({
+          error: "Gateway Error",
+          message: response.statusText || "Error from gateway",
+          status: response.status,
+        });
+      }
+    }
 
     // Forward relevant headers from Pinata response
     const headersToForward = [
@@ -501,8 +532,13 @@ module.exports = async (req, res) => {
       }
     }
 
-    // Pipe the response
-    response.data.pipe(res);
+    // Only pipe successful responses
+    if (response.data && typeof response.data.pipe === "function") {
+      response.data.pipe(res);
+    } else {
+      // For non-stream responses (shouldn't happen with successful requests, but safety check)
+      res.send(response.data);
+    }
   } catch (error) {
     console.error("Proxy error:", error.message);
 
