@@ -188,50 +188,91 @@ function authenticateRequest(req) {
   const origin = req.headers.origin || req.headers.referer;
   const userAgent = req.headers["user-agent"] || "";
 
-  // Temporary debug logging
-  console.log(`Request: ${req.method} ${req.url}`);
-  console.log(`User-Agent: "${userAgent}"`);
+  // Temporary debugging - log all requests
+  console.log(`=== REQUEST DEBUG ===`);
+  console.log(`Method: ${req.method}`);
+  console.log(`URL: ${req.url}`);
   console.log(`Origin: "${origin}"`);
+  console.log(`User-Agent: "${userAgent}"`);
 
   // If origin is provided, validate it
   if (origin) {
     try {
       const originUrl = new URL(origin);
+      console.log(`Parsed origin hostname: "${originUrl.hostname}"`);
+
       const isAllowedOrigin = ALLOWED_ORIGINS.some((allowedOrigin) => {
         const allowedUrl = new URL(allowedOrigin);
+        console.log(
+          `Checking against allowed hostname: "${allowedUrl.hostname}"`
+        );
         return originUrl.hostname === allowedUrl.hostname;
       });
 
+      console.log(`Origin allowed: ${isAllowedOrigin}`);
+
       if (!isAllowedOrigin) {
-        console.log(`Blocked request from unauthorized origin: ${origin}`);
+        console.log(`❌ BLOCKED: Unauthorized origin: ${origin}`);
+        console.log(`Origin hostname: ${originUrl.hostname}`);
+        console.log(`Allowed origins:`, ALLOWED_ORIGINS);
         return false;
       }
+
+      console.log(`✅ ALLOWED: Authorized origin: ${origin}`);
     } catch (error) {
-      console.log(`Blocked request: Invalid origin format: ${origin}`);
+      console.log(
+        `❌ BLOCKED: Invalid origin format: ${origin}`,
+        error.message
+      );
       return false;
     }
   } else {
-    // No origin header - be extremely permissive for debugging
+    // No origin header - be permissive for direct access while blocking obvious scrapers
 
-    // Only block the most obvious scrapers
-    const isDefinitelyBlocked =
+    // Block obvious scraping tools
+    const isBlockedUserAgent =
       userAgent.includes("curl") ||
       userAgent.includes("wget") ||
-      userAgent.includes("python-requests");
+      userAgent.includes("python-requests") ||
+      userAgent.includes("Go-http-client") ||
+      userAgent.includes("Java/") ||
+      userAgent.includes("Apache-HttpClient") ||
+      (userAgent.includes("Python") && !userAgent.includes("Mozilla")) ||
+      userAgent.includes("libwww-perl") ||
+      userAgent.includes("PHP/") ||
+      userAgent.includes("node-fetch") ||
+      userAgent.includes("axios") ||
+      userAgent.includes("urllib");
 
-    if (isDefinitelyBlocked) {
-      console.log(`Blocked obvious scraper: ${userAgent}`);
+    // Check for legitimate bot/crawler requests that we want to allow
+    const isLegitimateBot =
+      userAgent.includes("bot") ||
+      userAgent.includes("crawler") ||
+      userAgent.includes("spider") ||
+      userAgent.includes("Googlebot") ||
+      userAgent.includes("Bingbot") ||
+      userAgent.includes("facebookexternalhit") ||
+      userAgent.includes("Twitterbot") ||
+      userAgent.includes("LinkedInBot") ||
+      userAgent.includes("WhatsApp") ||
+      userAgent.includes("Telegram") ||
+      userAgent.includes("Discord") ||
+      userAgent.includes("Slackbot");
+
+    // Block obvious scrapers unless they're legitimate bots
+    if (isBlockedUserAgent && !isLegitimateBot) {
+      console.log(`❌ BLOCKED: Scraper user agent: ${userAgent}`);
       return false;
     }
 
     // If no user agent is provided, block it
     if (!userAgent.trim()) {
-      console.log("Blocked request with empty user agent");
+      console.log(`❌ BLOCKED: Empty user agent`);
       return false;
     }
 
-    // Allow everything else for now
-    console.log(`Allowing request: ${userAgent}`);
+    // Allow everything else (browsers, media players, etc.)
+    console.log(`✅ ALLOWED: ${userAgent}`);
   }
 
   return true;
