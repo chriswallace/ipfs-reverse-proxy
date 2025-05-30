@@ -188,6 +188,11 @@ function authenticateRequest(req) {
   const origin = req.headers.origin || req.headers.referer;
   const userAgent = req.headers["user-agent"] || "";
 
+  // Temporary debug logging
+  console.log(`Request: ${req.method} ${req.url}`);
+  console.log(`User-Agent: "${userAgent}"`);
+  console.log(`Origin: "${origin}"`);
+
   // If origin is provided, validate it
   if (origin) {
     try {
@@ -206,23 +211,29 @@ function authenticateRequest(req) {
       return false;
     }
   } else {
-    // No origin header - check if it's a browser request for images
-    const isBrowserRequest =
-      userAgent.includes("Mozilla") ||
-      userAgent.includes("Chrome") ||
-      userAgent.includes("Safari") ||
-      userAgent.includes("Firefox") ||
-      userAgent.includes("Edge");
+    // No origin header - be extremely permissive for debugging
 
-    // Allow browser requests (for img tags, direct navigation)
-    // Block obvious programmatic requests (curl, wget, etc.)
-    if (!isBrowserRequest && !userAgent.includes("bot")) {
-      console.log(`Blocked non-browser request without origin: ${userAgent}`);
+    // Only block the most obvious scrapers
+    const isDefinitelyBlocked =
+      userAgent.includes("curl") ||
+      userAgent.includes("wget") ||
+      userAgent.includes("python-requests");
+
+    if (isDefinitelyBlocked) {
+      console.log(`Blocked obvious scraper: ${userAgent}`);
       return false;
     }
+
+    // If no user agent is provided, block it
+    if (!userAgent.trim()) {
+      console.log("Blocked request with empty user agent");
+      return false;
+    }
+
+    // Allow everything else for now
+    console.log(`Allowing request: ${userAgent}`);
   }
 
-  // No API key required for public image serving
   return true;
 }
 
