@@ -1,20 +1,20 @@
 # IPFS Reverse Proxy for Pinata
 
-A secure reverse proxy media server for Pinata IPFS gateway that can be deployed as a microservice on Vercel. **Now with domain-based access control for public image serving.**
+A secure reverse proxy media server for Pinata IPFS gateway that can be deployed as a microservice on Vercel. **Now with intelligent security that accepts normal web traffic while blocking malicious behavior.**
 
 ## Features
 
-- 🔐 **Domain-Based Security**: Restricts access to specific domains (wallacemuseum.com + localhost)
+- 🛡️ **Smart Security**: Blocks obvious malicious behavior while allowing normal web traffic
 - 🖼️ **Public Image Serving**: Serve images to the world through your custom domain
 - 🚀 **Vercel Ready**: Optimized for serverless deployment on Vercel
 - 🎯 **Pinata Integration**: Seamlessly proxies requests to Pinata IPFS gateway
-- 📱 **CORS Enabled**: Properly configured for web applications
+- 📱 **CORS Enabled**: Properly configured for web applications with broad compatibility
 - 🎬 **Media Optimized**: Optimized caching headers for images, videos, and audio
 - 🔍 **Health Monitoring**: Built-in health check endpoint
 - ⚡ **Fast**: Streams content directly without buffering
 - 🌐 **Custom Domain Support**: Works with custom domains like `ipfs.wallacemuseum.com`
-- 🌍 **No API Keys Required**: Public access for legitimate browser requests
-- 🔄 **Fallback Gateways**: Automatically tries multiple IPFS gateways if content is not found
+- 🌍 **Open Access**: Accepts requests from any legitimate source
+- 🔄 **Enhanced Fallback**: Automatically tries multiple IPFS gateways with improved reliability
 - 🎨 **Image Optimization**: Advanced image processing with format conversion, resizing, and optimization
 
 ## Quick Start
@@ -80,19 +80,36 @@ The proxy now supports direct IPFS hash access for public image serving:
 <img src="https://ipfs.wallacemuseum.com/gateway/QmYourIPFSHash" alt="Image" />
 ```
 
-### Domain-Based Access Control
+### Smart Security Model
 
-The proxy automatically restricts access to these domains:
+The proxy now uses intelligent security that **accepts normal web traffic** while blocking obvious malicious behavior:
 
-**✅ Allowed Domains:**
+**✅ Allowed Traffic:**
+
+- All legitimate browser requests
+- API calls from web applications
+- Direct image/media requests
+- CDN and caching services
+- Search engine crawlers (legitimate bots)
+- Any request with normal user agents and patterns
+
+**❌ Blocked Traffic:**
+
+- Security scanners (Nikto, Nessus, etc.)
+- Malware and exploit attempts
+- SQL injection patterns
+- XSS attack patterns
+- Path traversal attempts
+- Command injection attempts
+- Requests with no user agent
+- Suspiciously short or fake user agents
+
+**🔧 Preferred Origins** (get additional privileges but others aren't blocked):
 
 - `https://wallacemuseum.com`
 - `https://www.wallacemuseum.com`
 - `https://ipfs.wallacemuseum.com`
 - `http://localhost:*` (development)
-- `http://127.0.0.1:*` (development)
-
-**❌ Blocked:** All other domains will receive 401 Unauthorized
 
 ### Using URL Rewrites
 
@@ -157,12 +174,16 @@ The proxy includes automatic fallback functionality to ensure maximum content av
 ### How Fallback Works
 
 1. **Primary Request**: First tries your dedicated gateway (if configured)
-2. **Fallback on 404**: If content is not found (404), automatically tries:
+2. **Fallback on Error**: If content is not found or fails, automatically tries:
    - `ipfs.io`
    - `dweb.link`
-   - `gateway.pinata.cloud`
+   - `nftstorage.link`
+   - `web3.storage`
+   - `fleek.ipfs.io`
 3. **Best Effort**: Returns content from the first gateway that has it
-4. **Graceful Degradation**: Returns 404 only if no gateway has the content
+4. **Graceful Degradation**: Returns 503 only if no gateway has the content
+
+**Note:** Pinata's public gateway (`gateway.pinata.cloud`) is not included in fallbacks because it blocks HTML content for security reasons, making it unsuitable for serving code/HTML content that this proxy is designed to handle.
 
 ### Fallback Behavior
 
@@ -548,3 +569,24 @@ MIT
 - **Regular Content**: Uses standard `/ipfs/{cid}{path}` endpoint for maximum compatibility with directories, files, and nested paths
 - **Image Optimization**: Uses Pinata's `/files/{cid}` endpoint (as per [Pinata's documentation](https://docs.pinata.cloud/gateways/image-optimizations)) with `img-` prefixed parameters for advanced image processing
 - **Fallback System**: Automatically tries multiple public IPFS gateways when content is restricted on dedicated gateways
+
+## ⚠️ Current Status
+
+**IMPORTANT**: If you're seeing a "Vercel Security Checkpoint" page instead of your content, this means Vercel has flagged your domain at the platform level. This is **not** a code issue - it happens before our serverless functions even run.
+
+### **Troubleshooting Vercel Security Checkpoint**
+
+If you encounter the security checkpoint:
+
+1. **Contact Vercel Support**: Submit a support ticket explaining that you're running a legitimate IPFS proxy service
+2. **Try Alternative Domain**: Deploy to a different subdomain (e.g., `gateway.yourdomain.com`, `files.yourdomain.com`)
+3. **Wait**: Sometimes the checkpoint resolves automatically after 24-48 hours
+4. **Verify Configuration**: Ensure your domain is properly configured in Vercel dashboard
+
+### **Why This Happens**
+
+- IPFS proxies can trigger automated security systems
+- High traffic volume or unusual request patterns
+- Domain flagged by Vercel's security algorithms
+
+The proxy code itself is working correctly - the issue is at the Vercel platform level.
