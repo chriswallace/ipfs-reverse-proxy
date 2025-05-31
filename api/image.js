@@ -46,10 +46,18 @@ module.exports = async (req, res) => {
       });
     }
 
-    // Clean the hash
-    const cleanHash = hash.replace(/^ipfs\//, "").replace(/^\//, "");
+    // Clean the hash and extract just the hash part (before any path)
+    let cleanHash = hash.replace(/^ipfs\//, "").replace(/^\//, "");
+    let filePath = "";
 
-    // Basic hash validation
+    // If there's a path in the hash parameter, split it
+    const hashParts = cleanHash.split("/");
+    if (hashParts.length > 1) {
+      cleanHash = hashParts[0];
+      filePath = "/" + hashParts.slice(1).join("/");
+    }
+
+    // Basic hash validation (now only validates the hash part)
     if (!cleanHash.match(/^Qm[1-9A-HJ-NP-Za-km-z]{44}$|^bafy[a-z2-7]{55}$/)) {
       return res.status(400).json({
         error: "Bad Request",
@@ -62,7 +70,7 @@ module.exports = async (req, res) => {
 
     // Try dedicated gateway first if configured
     if (process.env.PINATA_GATEWAY_DOMAIN) {
-      let dedicatedUrl = `https://${process.env.PINATA_GATEWAY_DOMAIN}/ipfs/${cleanHash}`;
+      let dedicatedUrl = `https://${process.env.PINATA_GATEWAY_DOMAIN}/ipfs/${cleanHash}${filePath}`;
       if (Object.keys(otherParams).length > 0) {
         dedicatedUrl += `?${new URLSearchParams(otherParams).toString()}`;
       }
@@ -71,7 +79,7 @@ module.exports = async (req, res) => {
 
     // Add fallback gateways
     fallbackGateways.forEach((gateway) => {
-      let fallbackUrl = `${gateway}/ipfs/${cleanHash}`;
+      let fallbackUrl = `${gateway}/ipfs/${cleanHash}${filePath}`;
       if (Object.keys(otherParams).length > 0) {
         fallbackUrl += `?${new URLSearchParams(otherParams).toString()}`;
       }
