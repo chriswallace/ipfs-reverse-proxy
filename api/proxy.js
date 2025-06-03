@@ -73,7 +73,7 @@ module.exports = async (req, res) => {
 
     // Try dedicated gateway first if configured
     if (process.env.PINATA_GATEWAY_DOMAIN) {
-      const dedicatedUrl = `https://${
+      let dedicatedUrl = `https://${
         process.env.PINATA_GATEWAY_DOMAIN
       }/ipfs/${cleanHash}${finalPath || ""}`;
       if (Object.keys(otherParams).length > 0) {
